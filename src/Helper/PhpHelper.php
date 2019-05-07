@@ -41,12 +41,6 @@ class PhpHelper
      */
     public static function call($cb, array $args = [])
     {
-        if (version_compare(SWOOLE_VERSION, '4.0', '>=')) {
-            $ret = call_user_func_array($cb, $args);
-        } else {
-            $ret = \Swoole\Coroutine::call_user_func_array($cb, $args);
-        }
-
-        return $ret;
+        return call_user_func_array($cb, $args);
     }
 }
