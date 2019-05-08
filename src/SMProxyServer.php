@@ -92,7 +92,7 @@ class SMProxyServer extends BaseServer
                         } else {
                             $model = 'write';
                         }
-                        $key = $this ->compareModel($model, $server, $fd);
+                        $key = $this->compareModel($model, $server, $fd);
                         if ($data) {
                             if (isset($this->mysqlClient[$fd][$key])) {
                                 $this->mysqlClient[$fd][$key]->send($data);
@@ -107,7 +107,7 @@ class SMProxyServer extends BaseServer
                         //预处理语句id记录
                         if (isset($this->mysqlClient[$fd][$key])) {
                             $clientId = spl_object_hash($this->mysqlClient[$fd][$key]);
-                            switch ($bin ->data[4]) {
+                            switch ($bin->data[4]) {
                                 case MysqlPacket::$COM_STMT_PREPARE:
                                     if (isset($this->stmtId[$clientId])) {
                                         $this->stmtId[$clientId]++;
@@ -133,7 +133,7 @@ class SMProxyServer extends BaseServer
      * 客户端断开连接.
      *
      * @param \swoole_server $server
-     * @param int            $fd
+     * @param int $fd
      *
      */
     public function onClose(\swoole_server $server, int $fd)
@@ -145,7 +145,7 @@ class SMProxyServer extends BaseServer
             unset($this->halfPack[$fd]);
         }
         $connectHasTransaction = false;
-        $connectHasAutoCommit  = false;
+        $connectHasAutoCommit = false;
         if (isset($this->connectHasTransaction[$fd]) && true === $this->connectHasTransaction[$fd]) {
             //回滚未关闭事务
             $connectHasTransaction = true;
@@ -160,7 +160,7 @@ class SMProxyServer extends BaseServer
             foreach ($this->mysqlClient[$fd] as $key => $mysqlClient) {
                 $model = explode(DB_DELIMITER, $key)[0];
                 if ($model == 'write') {
-                    if (isset($mysqlClient ->client) && $mysqlClient ->client) {
+                    if (isset($mysqlClient->client) && $mysqlClient->client) {
                         if ($connectHasTransaction) {
                             $mysqlClient->send(getString([9, 0, 0, 0, 3, 82, 79, 76, 76, 66, 65, 67, 75]));
                         }
@@ -213,20 +213,20 @@ class SMProxyServer extends BaseServer
                 MySQLPool::init($this->dbConfig);
             } catch (MySQLException $exception) {
                 self::writeErrorMessage($exception, 'mysql');
-                $server ->shutdown();
+                $server->shutdown();
                 return;
             } catch (SMProxyException $exception) {
                 self::writeErrorMessage($exception, 'system');
-                $server ->shutdown();
+                $server->shutdown();
                 return;
             }
             if ($worker_id === (CONFIG['server']['swoole']['worker_num'] - 1)) {
                 try {
                     Coroutine::sleep(0.1);
-                    $this ->setStartConns();
+                    $this->setStartConns();
                 } catch (MySQLException $exception) {
                     self::writeErrorMessage($exception, 'mysql');
-                    $server ->shutdown();
+                    $server->shutdown();
                     return;
                 }
                 $system_log = Log::getLogger('system');
@@ -263,14 +263,14 @@ class SMProxyServer extends BaseServer
                 //初始化startConns
                 $mysql = new \Swoole\Coroutine\MySQL();
                 $mysql->connect([
-                    'host'     => CONFIG['server']['host'],
-                    'user'     => CONFIG['server']['user'],
-                    'port'     => CONFIG['server']['port'],
+                    'host' => CONFIG['server']['host'],
+                    'user' => CONFIG['server']['user'],
+                    'port' => CONFIG['server']['port'],
                     'password' => CONFIG['server']['password'],
                     'database' => explode(DB_DELIMITER, $key)[1],
                 ]);
-                if ($mysql ->connect_errno) {
-                    throw new MySQLException(CONFIG['server']['host'] . ':' . CONFIG['server']['port'] . $mysql ->connect_error);
+                if ($mysql->connect_errno) {
+                    throw new MySQLException(CONFIG['server']['host'] . ':' . CONFIG['server']['port'] . $mysql->connect_error);
                 }
                 $mysql->setDefer();
                 switch (explode(DB_DELIMITER, $key)[0]) {
@@ -287,8 +287,8 @@ class SMProxyServer extends BaseServer
         }
         foreach ($clients as $client) {
             $client->recv();
-            if ($client ->errno) {
-                throw new MySQLException($client ->error);
+            if ($client->errno) {
+                throw new MySQLException($client->error);
             }
             $client->close();
         }
@@ -324,7 +324,7 @@ class SMProxyServer extends BaseServer
     private function accessDenied(\swoole_server $server, int $fd, int $serverId)
     {
         $message = 'SMProxy@access denied for user \'' . $this->source[$fd]->user . '\'@\'' .
-            $server ->getClientInfo($fd)['remote_ip'] . '\' (using password: YES)';
+            $server->getClientInfo($fd)['remote_ip'] . '\' (using password: YES)';
         $errMessage = self::writeErrMessage($serverId, $message, ErrorCode::ER_ACCESS_DENIED_ERROR, 28000);
         if ($server->exist($fd)) {
             $server->send($fd, getString($errMessage));
@@ -417,7 +417,7 @@ class SMProxyServer extends BaseServer
         if ($bin->data[0] == 20) {
             $checkAccount = $this->checkAccount($server, $fd, $this->source[$fd]->user, array_copy($bin->data, 4, 20));
             if (!$checkAccount) {
-                $this ->accessDenied($server, $fd, 4);
+                $this->accessDenied($server, $fd, 4);
             } else {
                 if ($server->exist($fd)) {
                     $server->send($fd, getString(OkPacket::$SWITCH_AUTH_OK));
@@ -434,9 +434,9 @@ class SMProxyServer extends BaseServer
             $checkAccount = $this->checkAccount($server, $fd, $authPacket->user ?? '', $authPacket->password ?? []);
             if (!$checkAccount) {
                 if ($authPacket->pluginName == 'mysql_native_password') {
-                    $this ->accessDenied($server, $fd, 2);
+                    $this->accessDenied($server, $fd, 2);
                 } else {
-                    $this->source[$fd]->user = $authPacket ->user;
+                    $this->source[$fd]->user = $authPacket->user;
                     $this->source[$fd]->database = $authPacket->database;
                     $this->source[$fd]->seed = RandomUtil::randomBytes(20);
                     $authSwitchRequest = array_merge(
@@ -480,7 +480,7 @@ class SMProxyServer extends BaseServer
             case MySQLPacket::$COM_QUERY:
                 $connection = new FrontendConnection();
                 $queryType = $connection->query($bin);
-                $hintArr   = RouteService::route(substr($data, 5, strlen($data) - 5));
+                $hintArr = RouteService::route(substr($data, 5, strlen($data) - 5));
                 if (isset($hintArr['db_type'])) {
                     switch ($hintArr['db_type']) {
                         case 'read':
@@ -509,29 +509,24 @@ class SMProxyServer extends BaseServer
                     ServerParse::USE == $queryType
                 ) {
                     //处理读操作
-                    if (!isset($this->connectHasTransaction[$fd]) ||
-                        !$this->connectHasTransaction[$fd]) {
-                        if ((('u' == $trim_data[-6] || 'U' == $trim_data[-6]) &&
-                            ServerParse::UPDATE == ServerParse::uCheck($trim_data, -6, false))) {
+                    if (!isset($this->connectHasTransaction[$fd]) || !$this->connectHasTransaction[$fd]) {
+                        if ((('u' == $trim_data[-6] || 'U' == $trim_data[-6]) && ServerParse::UPDATE == ServerParse::uCheck($trim_data, -6, false))) {
                             //判断悲观锁
                             $this->connectReadState[$fd] = false;
                         } else {
                             $this->connectReadState[$fd] = true;
                         }
                     }
-                } elseif (ServerParse::START == $queryType || ServerParse::BEGIN == $queryType
-                ) {
+                } elseif (ServerParse::START == $queryType || ServerParse::BEGIN == $queryType) {
                     //处理事务
                     $this->connectHasTransaction[$fd] = true;
                     $this->connectReadState[$fd] = false;
-                } elseif (ServerParse::SET == $queryType && false !== strpos($data, 'autocommit', 4) &&
-                    0 == $trim_data[-1]) {
+                } elseif (ServerParse::SET == $queryType && false !== strpos($data, 'autocommit', 4) && 0 == $trim_data[-1]) {
                     //处理autocommit事务
                     $this->connectHasAutoCommit[$fd] = true;
                     $this->connectHasTransaction[$fd] = true;
                     $this->connectReadState[$fd] = false;
-                } elseif (ServerParse::SET == $queryType && false !== strpos($data, 'autocommit', 4) &&
-                    1 == $trim_data[-1]) {
+                } elseif (ServerParse::SET == $queryType && false !== strpos($data, 'autocommit', 4) && 1 == $trim_data[-1]) {
                     $this->connectHasAutoCommit[$fd] = false;
                     $this->connectReadState[$fd] = false;
                 } elseif (ServerParse::COMMIT == $queryType || ServerParse::ROLLBACK == $queryType) {
